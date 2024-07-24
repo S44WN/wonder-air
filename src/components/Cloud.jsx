@@ -23,3 +23,14 @@ export function Cloud({ opacity, ...props }) {
 }
 
 useGLTF.preload("./models/cloud/model.glb");
+
+// const nextPoint =
+// linePoints[(Math.min(currentPointIndex + 1), linePoints.length - 1)];
+
+// const xDisplacement =
+// (nextPoint.x - currentPoint.x) *
+// (scroll.offset * linePoints.length - currentPointIndex);
+
+// const angleRotation =
+// (xDisplacement < 0 ? 1 : -1) *
+// Math.min(Math.abs(xDisplacement), Math.PI / 3);

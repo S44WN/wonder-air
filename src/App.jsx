@@ -6,10 +6,10 @@ function App() {
   return (
     <>
       <Canvas
-        camera={{
-          position: [0, 0, 5],
-          fov: 30,
-        }}
+      // camera={{
+      //   position: [0, 0, 5],
+      //   fov: 30,
+      // }}
       >
         <color attach="background" args={["#ececec"]} />
         <ScrollControls pages={5} damping={0.5}>
