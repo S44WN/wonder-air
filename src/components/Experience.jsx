@@ -16,6 +16,8 @@ import { useLayoutEffect } from "react";
 import gsap from "gsap";
 import { color } from "three/examples/jsm/nodes/Nodes.js";
 import { fadeOnBeforeCompile } from "../utils/fadeMaterial";
+import { usePlay } from "../context/Play";
+import { useEffect } from "react";
 
 const LINE_NB_POINTS = 1000;
 const CURVE_DISTANCE = 250;
@@ -38,6 +40,10 @@ export const Experience = () => {
     ],
     []
   );
+
+  const sceneOpacity = useRef(0);
+  const lineMaterialRef = useRef();
+
   const curve = useMemo(() => {
     return new THREE.CatmullRomCurve3(curvePoints, false, "catmullrom", 0.5);
   }, []);
@@ -263,15 +269,15 @@ export const Experience = () => {
         ),
         rotation: new THREE.Euler(Math.PI / 4, Math.PI / 6, 0),
       },
-      {
-        scale: new THREE.Vector3(4, 4, 4),
-        position: new THREE.Vector3(
-          curvePoints[7].x,
-          curvePoints[7].y,
-          curvePoints[7].z
-        ),
-        rotation: new THREE.Euler(0, 0, 0),
-      },
+      // {
+      //   scale: new THREE.Vector3(4, 4, 4),
+      //   position: new THREE.Vector3(
+      //     curvePoints[7].x,
+      //     curvePoints[7].y,
+      //     curvePoints[7].z
+      //   ),
+      //   rotation: new THREE.Euler(0, 0, 0),
+      // },
     ],
     []
   );
@@ -289,13 +295,54 @@ export const Experience = () => {
   }, [curve]);
 
   const cameraGroup = useRef();
-  const scroll = useScroll();
+  const perspCameraRef = useRef();
   const cameraRail = useRef();
+  const scroll = useScroll();
   const lastScroll = useRef(0);
 
+  const { play, setHasScroll, end, setEnd } = usePlay();
+
   useFrame((_state, delta) => {
+    //responsive
+    if (window.innerWidth > window.innerHeight) {
+      //landscape
+      perspCameraRef.current.fov = 30;
+      perspCameraRef.current.position.z = 5;
+    } else {
+      //portrait
+      perspCameraRef.current.fov = 80;
+      perspCameraRef.current.position.z = 5;
+    }
+
+    if (lastScroll.current <= 0 && scroll.offset > 0) {
+      setHasScroll(true);
+    }
+
+    if (play && !end && sceneOpacity.current < 1) {
+      sceneOpacity.current = THREE.MathUtils.lerp(
+        sceneOpacity.current,
+        1,
+        delta * 0.1
+      );
+    }
+
+    if (end && sceneOpacity.current > 0) {
+      sceneOpacity.current = THREE.MathUtils.lerp(
+        sceneOpacity.current,
+        0,
+        delta
+      );
+    }
+
+    if (end) {
+      return;
+    }
+
+    lineMaterialRef.current.opacity = sceneOpacity.current;
+
     let friction = 1;
     let resetCameraRail = true;
+
     //look close to text sections
     textSections.forEach((textSection) => {
       const distance = textSection.position.distanceTo(
@@ -393,6 +440,14 @@ export const Experience = () => {
     );
 
     airplane.current.quaternion.slerp(targetAirplaneQuaternion, delta * 24);
+
+    if (
+      cameraGroup.current.position.z <
+      curvePoints[curvePoints.length - 1].z + 100
+    ) {
+      setEnd(true);
+      planeOutTl.current.play();
+    }
   });
 
   const airplane = useRef();
@@ -402,6 +457,9 @@ export const Experience = () => {
     colorA: "#3535cc",
     colorB: "#abaadd",
   });
+
+  const planeInTl = useRef();
+  const planeOutTl = useRef();
 
   useLayoutEffect(() => {
     tl.current = gsap.timeline();
@@ -423,60 +481,114 @@ export const Experience = () => {
     });
 
     tl.current.pause();
+
+    planeInTl.current = gsap.timeline();
+    planeInTl.current.pause();
+    planeInTl.current.from(airplane.current.position, {
+      duration: 3,
+      z: 5,
+      y: -2,
+    });
+
+    planeOutTl.current = gsap.timeline();
+    planeOutTl.current.pause();
+
+    planeOutTl.current.to(
+      airplane.current.position,
+      {
+        duration: 3,
+        z: -250,
+        y: 10,
+      },
+      0
+    );
+
+    planeOutTl.current.to(
+      cameraRail.current.position,
+      {
+        duration: 8,
+        y: 12,
+      },
+      0
+    );
+
+    planeOutTl.current.to(airplane.current.rotation, {
+      duration: 1,
+      z: -1000,
+    });
   }, []);
 
-  return (
-    <>
-      {/* <OrbitControls /> */}
-      <directionalLight position={[0, 3, 1]} intensity={0.1} />
-      <group ref={cameraGroup}>
-        <Background backgroundColors={backgroundColors} />
-        <group ref={cameraRail}>
-          <PerspectiveCamera position={[0, 0, 5]} fov={30} makeDefault />
-        </group>
-        <group ref={airplane}>
-          <Float floatIntensity={1} speed={1.5} rotationIntensity={0.5}>
-            <Airplane
-              rotation-y={Math.PI / 2}
-              scale={[0.2, 0.2, 0.2]}
-              position-y={0.1}
+  useEffect(() => {
+    if (play) {
+      planeInTl.current.play();
+    }
+  }, [play]);
+
+  return useMemo(
+    () => (
+      <>
+        {/* <OrbitControls /> */}
+        <directionalLight position={[0, 3, 1]} intensity={0.1} />
+        <group ref={cameraGroup}>
+          <Background backgroundColors={backgroundColors} />
+          <group ref={cameraRail}>
+            <PerspectiveCamera
+              ref={perspCameraRef}
+              position={[0, 0, 5]}
+              fov={30}
+              makeDefault
             />
-          </Float>
+          </group>
+          <group ref={airplane}>
+            <Float floatIntensity={1} speed={1.5} rotationIntensity={0.5}>
+              <Airplane
+                rotation-y={Math.PI / 2}
+                scale={[0.2, 0.2, 0.2]}
+                position-y={0.1}
+              />
+            </Float>
+          </group>
         </group>
-      </group>
 
-      {/* TEXT */}
-      {textSections.map((textSection, index) => (
-        <TextSection key={index} {...textSection} />
-      ))}
+        {/* TEXT */}
+        {textSections.map((textSection, index) => (
+          <TextSection key={index} {...textSection} />
+        ))}
 
-      {/* LINE */}
-      <group position-y={-2}>
-        <mesh>
-          <extrudeGeometry
-            args={[
-              shape,
-              {
-                steps: LINE_NB_POINTS,
-                bevelEnabled: false,
-                extrudePath: curve,
-              },
-            ]}
-          />
-          <meshStandardMaterial
-            color={"white"}
+        {/* LINE */}
+        <group position-y={-2}>
+          <mesh>
+            <extrudeGeometry
+              args={[
+                shape,
+                {
+                  steps: LINE_NB_POINTS,
+                  bevelEnabled: false,
+                  extrudePath: curve,
+                },
+              ]}
+            />
+            <meshStandardMaterial
+              color={"white"}
+              ref={lineMaterialRef}
+              transparent
+              envMapIntensity={2}
+              onBeforeCompile={fadeOnBeforeCompile}
+            />
+          </mesh>
+        </group>
+
+        {/* CLOUDS */}
+        {clouds.map((cloud, index) => (
+          <Cloud
+            sceneOpacity={sceneOpacity}
+            key={index}
+            {...cloud}
             opacity={1}
-            transparent
-            envMapIntensity={2}
-            onBeforeCompile={fadeOnBeforeCompile}
           />
-        </mesh>
-      </group>
-
-      {/* CLOUDS */}
-      {clouds.map((cloud, index) => (
-        <Cloud key={index} {...cloud} opacity={1} />
-      ))}
-    </>
+        ))}
+      </>
+    ),
+    []
   );
 };
