@@ -54,9 +54,9 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: "white";
+  background: rgb(183, 200, 255);
   opacity: 1;
-  transition: opacity 2s ease-in-out;
+  transition: opacity 2.5s ease-in-out;
 }
 
 .loader--fade {
@@ -95,7 +95,7 @@ body {
   opacity: 0;
   font-family: "clash-display";
   font-size: 1rem;
-  color: white;
+  color: antiquewhite;
   position: absolute;
   top: 100px;
 }
@@ -114,6 +114,7 @@ body {
   font-family: "clash-display";
   font-size: 1.25rem;
   color: "#3535cc";
+  background-color: antiquewhite;
   border-radius: 32px;
   display: inline-block;
   cursor: pointer;
@@ -127,7 +128,7 @@ body {
 }
 
 .explore:hover {
-  color: white;
+  color: antiquewhite;
 }
 
 .explore:hover:before {
@@ -174,7 +175,7 @@ body {
 .outro__text {
   font-family: "clash-display";
   font-size: 1.5rem;
-  color: white;
+  color: antiquewhite;
   text-align: center;
 }
 
